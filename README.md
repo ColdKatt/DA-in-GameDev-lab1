@@ -5,7 +5,7 @@
 
 | Задание | Выполнение | Баллы |
 | ------ | ------ | ------ |
-| Задание 1 | # |   |
+| Задание 1 | * |   |
 | Задание 2 | # |   |
 | Задание 3 | # |   |
 
@@ -36,17 +36,30 @@
 Ход работы:
 1) Создать новый проект из шаблона 3D – Core;
   ![3dcore](screenshots/3dcore.png)
-3) Проверить, что настроена интеграция редактора Unity и Visual Studio Code
+2) Проверить, что настроена интеграция редактора Unity и Visual Studio Code
 (пункты 8-10 введения);
+  ![externaltools](screenshots/externaltools.png)
 3) Создать объект Plane;
+  ![plane](screenshots/plane.png)
 4) Создать объект Cube;
+  ![cube](screenshots/cube.png)
 5) Создать объект Sphere;
+  ![sphere](screenshots/sphere.png)
 6) Установить компонент Sphere Collider для объекта Sphere;
+  ![spherecollider](screenshots/spherecollider.png)
 7) Настроить Sphere Collider в роли триггера;
+  ![istrigger](screenshots/istrigger.png)
 8) Объект куб перекрасить в красный цвет;
+  ![redcolor](screenshots/redcolor.png)
 9) Добавить кубу симуляцию физики, при это куб не должен проваливаться под Plane;
+  ![rigidbodycube](screenshots/rigidbodycube.png)
 10) Написать скрипт, который будет выводить в консоль сообщение о том, что объект Sphere столкнулся с объектом Cube;
+  ![triggerscript](screenshots/triggerscript.png)
+  ![debugconsole](screenshots/debugconsole.png)
 11) При столкновении Cube должен менять свой цвет на зелёный, а при завершении столкновения обратно на красный.
+  ![triggerscript2](screenshots/triggerscript2.png)
+  ![cubegreen](screenshots/cubegreen.png)
+  ![cubered](screenshots/cubered.png)
 
 
 ## Задание 2
