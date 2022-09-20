@@ -6,7 +6,7 @@
 | Задание | Выполнение | Баллы |
 | ------ | ------ | ------ |
 | Задание 1 | * |   |
-| Задание 2 | # |   |
+| Задание 2 | * |   |
 | Задание 3 | # |   |
 
 знак "*" - задание выполнено; знак "#" - задание не выполнено;
@@ -68,8 +68,18 @@
   ![childsphere](screenshots/childsphere.png)
   ![nonchildsphere](screenshots/nonchildsphere.png)
   *Координаты дочернего объекта перестают зависеть от координат родителя.*
+  
 - Создайте три различных примера работы компонента RigidBody?
+  ![rigidbodyscript](screenshots/rigidbodyscript.png)
+  
+  ExplosionForce
   ![ExplosionForce](screenshots/ExplosionForce.gif)
+  
+  AddForce
+  ![AddForce](screenshots/AddForce.gif)
+  
+  AddTorque (здесь я "заморозил" куб по оси Y, дабы показать крутящий момент)
+  ![AddTorque](screenshots/AddTorque.gif)
 
 ## Задание 3
 ### Реализуйте на сцене генерацию n кубиков. Число n вводится пользователем после старта сцены.
