@@ -49,13 +49,70 @@
 ![mainmenu](screenshots/MainMenu.png)
 
 3. Ну и собственно реализация взаимодействия: кнопка настроек открывает дополнительное окно с настройками (ниже будет настройка звука),
-   кнопка выхода закрывает игру (в редакторе Unity это не показывается), кнопка игры открывает сцену с игрой
+   кнопка выхода закрывает игру (в редакторе Unity это не показывается), кнопка игры открывает сцену с игрой. В игре реализована пауза
 ![second](screenshots/Second.gif)
 
 4. Добавление звуков, персонажа и его анимации
 ![finale](screenshots/finale.gif)
 
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
+public class MainMenu : MonoBehaviour
+{
+    
+    public void PlayGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
+    }
+    
+    public void QuitGame()
+    {
+        Application.Quit();
+    }
+}
+```
+
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class Pause : MonoBehaviour
+{
+    private bool paused = false;
+    public GameObject panel;
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (!paused)
+            {
+                Time.timeScale = 0;
+                paused = true;
+                panel.SetActive(true);
+            }
+            else
+            {
+                Time.timeScale = 1;
+                paused = false;
+                panel.SetActive(false);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
+        }
+    }
+}
+```
 
 ## Задание 2
 ### Привести описание того, как происходит сборка проекта проекта под другие платформы. Какие могут быть особенности? 
@@ -78,7 +135,7 @@
 Самая простая реализация громкости - через слайдер. У слайдера есть событие OnValueChanged, в котором можно добавить ссылку на AudioListener (она же камера в данной игре), и поставить dynamic volume (volume).
 
 Обычный слайдер выглядит не очень красиво, его можно подделать под стиль игры:
-![option](screenshots/option.gif)
+![option](screenshots/Option.gif)
 
 ## Выводы
 - Больше узнал про анимации в Unity
