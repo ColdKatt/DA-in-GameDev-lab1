@@ -142,5 +142,5 @@ public class Pause : MonoBehaviour
 - Научился реализовать ползунки для настроек
 - Научился работать с несколькими сценами
 
-## Мемчик
-  ![meme](screenshots/meme.jpg)
+## Рыба крутится, распространите
+  ![spinfish](screenshots/spin-fish.gif)
