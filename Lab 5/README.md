@@ -40,106 +40,302 @@ Cоздание интерактивного приложения с рейти�
 
 Ход работы:
 
-Все видеоматериалы были посвящены доработке игры Dragon Picker:
-1. Были добавлены анимации и последующая подготовка сцены для главного меню
-![first](screenshots/First.gif)
+1. Настроили проверку на авторизацию человека. Если человек не авторизован - его просят авторизоваться, чтобы поиграть.
+![Authorization](Authorization.png)
 
-2. Добавлен канвас, на него навесили UI объекты для взаимодействия с кнопками
-![mainmenu](screenshots/MainMenu.png)
-
-3. Ну и собственно реализация взаимодействия: кнопка настроек открывает дополнительное окно с настройками (ниже будет настройка звука),
-   кнопка выхода закрывает игру (в редакторе Unity это не показывается), кнопка игры открывает сцену с игрой. В игре реализована пауза
-![second](screenshots/Second.gif)
-
-4. Добавление звуков, персонажа и его анимации
-![finale](screenshots/finale.gif)
-
+2. Добавлены поля для сохранения прогресса. Сохранения хранятся в файле saveyg.yg (Само сохранение делается из скрипта SavesYG.cs)
 ```c#
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-
-public class MainMenu : MonoBehaviour
+namespace YG
 {
-    
-    public void PlayGame()
+    [System.Serializable]
+    public class SavesYG
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
-    }
-    
-    public void QuitGame()
-    {
-        Application.Quit();
+        // "Технические сохранения" для работы плагина (Не удалять)
+        public int idSave;
+        public bool isFirstSession = true;
+        public string language = "ru";
+        public bool promptDone;
+
+        // Тестовые сохранения для демо сцены
+        // Можно удалить этот код, но тогда удалите и демо (папка Example)
+        public int money = 1;                       // Можно задать полям значения по умолчанию
+        public string newPlayerName = "Hello!";
+        public bool[] openLevels = new bool[3];
+
+        // Ваши сохранения
+
+        public int score;
+        public int highScore = 0;
+        public bool[] achievementList = new bool[3];
+
+        // Поля (сохранения) можно удалять и создавать новые. При обновлении игры сохранения ломаться не должны
+        // Пока выявленное ограничение - это расширение массива
+
+
+        // Вы можете выполнить какие то действия при загрузке сохранений
+        public SavesYG()
+        {
+            // Допустим, задать значения по умолчанию для отдельных элементов массива
+
+            openLevels[1] = true;
+
+            // Длина массива в проекте должна быть задана один раз!
+            // Если после публикации игры изменить длину массива, то после обновления игры у пользователей сохранения могут поломаться
+            // Если всё же необходимо увеличить длину массива, сдвиньте данное поле массива в самую нижнюю строку кода
+        }
     }
 }
 ```
 
+3. Благодаря сохранениям, игрок не теряет прогресс, и мы можем данные из файла сохранения переносить в игру.
+
+4. Сделана система ачивок в количестве трёх штук
+![achievments](achievments.png)
+
+5. В игру внедрена таблица лидеров, показывает место игрока, иконку, и количество очков
+![Leaderboard](Leaderboard.png)
+
+CheckSDK.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using YG;
+using TMPro;
+
+public class CheckSDK : MonoBehaviour
+{
+    private void OnEnable() => YandexGame.GetDataEvent += CheckAuthorization;
+
+    private void OnDisable() => YandexGame.GetDataEvent -= CheckAuthorization;
+
+    private TextMeshProUGUI highScoreText;
+    void Start()
+    {
+        Debug.Log("BEFORE START SDK = " + YandexGame.SDKEnabled);
+        Debug.Log("BEFORE START AUTH CHECK = " + YandexGame.auth);
+
+        InvokeRepeating("CheckConnectionSDK", 0.0f, 1.5f);
+    }
+    
+    private void CheckConnectionSDK()
+    {
+        if (YandexGame.SDKEnabled)
+        {
+            Debug.Log("SDK is enabled");
+            CancelInvoke("CheckConnectionSDK");
+            Debug.Log("AFTER START SDK = " + YandexGame.SDKEnabled);
+            Debug.Log("AFTER START AUTH CHECK = " + YandexGame.auth);
+
+            CheckAuthorization();
+        }
+        else
+        {
+            Debug.Log("SDK is disabled");
+        }
+    }
+
+    private void CheckAuthorization()
+    {
+        if (YandexGame.auth)
+        {
+            Debug.Log("OK!");
+        }
+        else
+        {
+            Debug.Log("Authorization required!");
+            YandexGame.AuthDialog();
+        }
+        if (GameObject.Find("HighScore"))
+        {
+            var scoreGO = GameObject.Find("HighScore");
+            highScoreText = scoreGO.GetComponent<TextMeshProUGUI>();
+            highScoreText.text = $"Highscore: {YandexGame.savesData.highScore.ToString()}";
+        }
+    }
+    
+}
+```
+
+DragonPicker.cs
 ```c#
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using YG;
+using TMPro;
 
-public class Pause : MonoBehaviour
+public class DragonPicker : MonoBehaviour
 {
-    private bool paused = false;
-    public GameObject panel;
+    private void OnEnable() => YandexGame.GetDataEvent += GetLoadSave;
+
+    private void OnDisable() => YandexGame.GetDataEvent -= GetLoadSave;
+
+    public GameObject energyShieldPrefab;
+    public int numEnergyShield = 3;
+    public float energyShieldBottomY = -6.0f;
+    public float energyShieldRadius = 1.5f;
+    public TextMeshProUGUI scoreGT;
+    public TextMeshProUGUI playerNameText;
+
+    public bool[] achievementList = new bool[YandexGame.savesData.achievementList.Length];
+
+    public List<GameObject> shieldList;
+    // Start is called before the first frame update
+    void Start()
+    {
+        if (YandexGame.SDKEnabled)
+        {
+            GetLoadSave();
+        }
+        shieldList = new List<GameObject>();
+
+        for (int i = 1; i <= numEnergyShield; i++)
+        {
+            var tShieldGo = Instantiate<GameObject>(energyShieldPrefab);
+            tShieldGo.transform.position = new Vector3(0, energyShieldBottomY, 0);
+            tShieldGo.transform.localScale = new Vector3(1 * i, 1 * i, 1 * i);
+            shieldList.Add(tShieldGo);
+        }
+    }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            if (!paused)
-            {
-                Time.timeScale = 0;
-                paused = true;
-                panel.SetActive(true);
-            }
-            else
-            {
-                Time.timeScale = 1;
-                paused = false;
-                panel.SetActive(false);
-            }
-        }
+        
+    }
 
-        if (Input.GetKeyDown(KeyCode.Escape))
+    public void DragonEggDestroyer()
+    {
+        var tDragonEggArray = GameObject.FindGameObjectsWithTag("Dragon Egg");
+        foreach (var tGO in tDragonEggArray)
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex - 1);
+            Destroy(tGO);
         }
+        var shieldIndex = shieldList.Count - 1;
+        var tShieldGo = shieldList[shieldIndex];
+        shieldList.RemoveAt(shieldIndex);
+        Destroy(tShieldGo);
+
+        if (shieldList.Count == 0)
+        {
+            var scoreGO = GameObject.Find("Score");
+            scoreGT = scoreGO.GetComponent<TextMeshProUGUI>();
+            achievementList[0] = true;
+            GetScoreAchievement(10, 1);
+            GetScoreAchievement(20, 2);
+            SavingUserData(int.Parse(scoreGT.text), YandexGame.savesData.highScore, achievementList);
+            YandexGame.NewLeaderboardScores("TopPlayerScore", int.Parse(scoreGT.text));
+            SceneManager.LoadScene("_0Scene");
+            GetLoadSave();
+        }
+    }
+
+    public void GetLoadSave()
+    {
+        //YandexGame.ResetSaveProgress();
+        Debug.Log(YandexGame.savesData.score);
+        var playerNameGO = GameObject.Find("PlayerName");
+        playerNameText = playerNameGO.GetComponent<TextMeshProUGUI>();
+        playerNameText.text = YandexGame.playerName;
+        for (var achievementIndex = 0; achievementIndex < achievementList.Length; achievementIndex++)
+        {
+            achievementList[achievementIndex] = YandexGame.savesData.achievementList[achievementIndex];
+        }
+    }
+
+    public void SavingUserData(int currentScore, int currentHighScore, bool[] achievementList)
+    {
+        YandexGame.savesData.score = currentScore;
+        if (currentScore > currentHighScore)
+        {
+            YandexGame.savesData.highScore = currentScore;
+        }
+        
+        for (var achievementIndex = 0; achievementIndex < achievementList.Length; achievementIndex++)
+        {
+            YandexGame.savesData.achievementList[achievementIndex] = achievementList[achievementIndex];
+        }
+        YandexGame.SaveProgress();
+    }
+
+    private void GetScoreAchievement(int scoreNeeded, int achievementIndex)
+    {
+        if (int.Parse(scoreGT.text) >= scoreNeeded)
+        {
+            achievementList[achievementIndex] = true;
+        }
+    }
+}
+```
+
+Achievements.cs
+```c#
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using YG;
+using TMPro;
+
+public class Achievements : MonoBehaviour
+{
+    private void OnEnable() => YandexGame.GetDataEvent += GetAchievements;
+
+    private void OnDisable() => YandexGame.GetDataEvent -= GetAchievements;
+
+    private bool[] achievementList = new bool[YandexGame.savesData.achievementList.Length];
+    public List<TextMeshProUGUI> achievementText;
+
+    public void SetAchievementCompleting()
+    {
+        GetAchievements();
+        for (var achievementIndex = 0; achievementIndex < achievementList.Length; achievementIndex++)
+        {
+            if (achievementList[achievementIndex])
+            {
+                achievementText[achievementIndex].color = Color.green;
+            }
+        }
+    }
+
+    public void GetAchievements()
+    {
+        for (var achievementIndex = 0; achievementIndex < achievementList.Length; achievementIndex++)
+        {
+            achievementList[achievementIndex] = YandexGame.savesData.achievementList[achievementIndex];
+        }
+        Debug.Log(achievementList);
+    }
+    // Update is called once per frame
+    void Update()
+    {
+        
     }
 }
 ```
 
 ## Задание 2
-### Привести описание того, как происходит сборка проекта проекта под другие платформы. Какие могут быть особенности? 
+### Описать не менее трех дополнительных функций Яндекс SDK, которые могут быть интегрированы в игру.
 
 Ход работы:
 
-Обычно сборка происходит во вкладке Build Settings:
-![build](screenshots/build.png)
+1. Магазин, где можно что-то покупать за внутриигровую валюту или за реальные деньги;
+2. Функция вознаграждения за просмотр рекламы: например если игрок потратил все щиты, то за просмотр рекламы можно добавить еще один (или два);
+3. Уведомление для игрока, чтобы тот поставил оценку игре;
+4. Смена языка на более предпочтительный.
 
-Там выбирается:
-- Платформа. На чем эта игра запускается
-- Сцены для сборки. Выбираются сцены, которые пойдут в сборку, выбирается их порядок.
-Дополнительно можно выбрать опцию Development Build, если это тестовая сборка для дебага.
 
 ## Задание 3
-### Добавить в меню Option возможность изменения громкости (от 0 до 100%) фоновой музыки в игре.
+### Доработать стилистическое оформление списка лидеров и системы достижений, реализованных в задании 1.
 
 Ход работы:
 
-Самая простая реализация громкости - через слайдер. У слайдера есть событие OnValueChanged, в котором можно добавить ссылку на AudioListener (она же камера в данной игре), и поставить dynamic volume (volume).
-
-Обычный слайдер выглядит не очень красиво, его можно подделать под стиль игры:
-![option](screenshots/Option.gif)
+Реализацию этого задания можно увидеть в задании 1. 
+Для ачивок выделена отдельная панель, где описываются ачивки и их выполненность: красные ачивки не сделаны, а зеленые выполнены.
+Таблица лидеров сделана так, что показывается место, иконка, количество очков игрока.
 
 ## Выводы
-- Больше узнал про анимации в Unity
-- Научился реализовать ползунки для настроек
-- Научился работать с несколькими сценами
-
-## Рыба крутится, распространите
-  ![spinfish](screenshots/spin-fish.gif)
+- Научился работать с сохранениями
+- Получил опыт в работе с плагином
+- Научился делать таблицы лидеров и внедрять их в игру
